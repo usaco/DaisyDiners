@@ -21,9 +21,7 @@ extern int client_setup(int* /*argc*/, char*** /*argv*/);
 
 extern void game_setup(const struct player_data* /*players*/);
 
-extern void turn_start(unsigned int /*roundnum*/, const struct player_data* /*players*/);
-
-extern void player_turn(struct player_unit* /*unit*/, const struct player_data* /*players*/);
+extern void player_turn(unsigned int /*roundnum*/, const struct player_data* /*players*/);
 
 extern void game_end();
 
