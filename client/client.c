@@ -29,15 +29,8 @@ extern void game_end();
 
 // ########################################################
 
-struct coord_t locFlowers;
-struct coord_t locTeleporter;
-struct coord_t locCloak;
-struct coord_t locDecoy;
-
-double P = 1.0;
-unsigned int T = 100;
-
-struct player_data players[2];
+int NUMPLAYERS = -1;
+struct player_data players[MAXPLAYERS];
 
 struct player_data SELF;
 
@@ -92,36 +85,7 @@ int main(int argc, char **argv)
 		sscanf(msg, "%s", tag);
 		
 		if (!strcmp(tag, "READY")) break;
-		else if (!strcmp(tag, "P"))
-			sscanf(msg, "%*s %lf", &P);
-		else if (!strcmp(tag, "T"))
-			sscanf(msg, "%*s %d", &T);
-		else if (!strcmp(tag, "POS"))
-		{
-			sscanf(msg, "%*s %d", &i);
-			switch(i)
-			{
-				case 1: sscanf(msg, "%*s %*d %d %d", &locCloak.row, &locCloak.col); break;
-				case 2: sscanf(msg, "%*s %*d %d %d", &locDecoy.row, &locDecoy.col); break;
-				case 3: sscanf(msg, "%*s %*d %d %d", &locFlowers.row, &locFlowers.col); break;
-				case 4: sscanf(msg, "%*s %*d %d %d", &locTeleporter.row, &locTeleporter.col); break;
-			}
-		}
 	}
-
-	// cow = 0
-	players[0].id = 0;
-	players[0].count = 1;
-	players[0].units[0].id = 0;
-	players[0].units[0].row = BOARDSIZE - 1;
-	players[0].units[0].col = BOARDSIZE - 1;
-
-	// farmer = 1
-	players[1].id = 1;
-	players[1].count = 1;
-	players[1].units[0].id = 0;
-	players[1].units[0].row = 0;
-	players[1].units[0].col = 0;
 
 	copyself(); game_setup(players);
 
@@ -131,37 +95,7 @@ int main(int argc, char **argv)
 		sscanf(msg, "%s", tag);
 		
 		if (!strcmp(tag, "ENDGAME")) break;
-		else if (!strcmp(tag, "ROUND"))
-		{
-			sscanf(msg, "%*s %u", &rnum);
-
-			copyself();
-			turn_start(rnum, players);
-		}
-		else if (!strcmp(tag, "UPDATE"))
-		{
-			unsigned int u, x, row, col, silent;
-			sscanf(msg, "%*s %u %u %u %u %d", &u, &x, &row, &col, &silent);
-
-			players[u].units[x].row = row;
-			players[u].units[x].col = col;
-			if (!silent) players[u].units[x].last_update = rnum;
-		}
-		else if (!strcmp(tag, "MOVE"))
-		{
-			unsigned int x, row, col;
-			sscanf(msg, "%*s %u %u %u", &x, &row, &col);
-			copyself(); player_turn(SELF.units + x, players);
-			
-			sprintf(msg, "%d %d", SELF.units[x].row, SELF.units[x].col);
-			send(msg);
-		}
-		else if (!strcmp(tag, "COUNT"))
-		{
-			unsigned int x, c;
-			sscanf(msg, "%*s %u %u", &x, &c);
-			players[x].count = c;
-		}
+		
 		// got an unexpected message...
 		else EXPECTED(tag, "ROUND/ENDGAME/MOVE/UPDATE");
 	}
