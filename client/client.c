@@ -27,7 +27,10 @@ extern void game_end();
 
 // ########################################################
 
+int BOARDSIZE = -1;
 int NUMPLAYERS = -1;
+int NUMROUNDS = -1;
+
 struct player_data players[MAXPLAYERS];
 
 struct player_data SELF;
@@ -54,6 +57,12 @@ int send(char* msg)
 		bl -= br = write(_fdout, m, bl);
 
 	return br;
+}
+
+void clamp(int *x, int a, int b)
+{
+	if (*x < a) *x = a;
+	if (*x > b) *x = b;
 }
 
 int main(int argc, char **argv)
@@ -83,6 +92,12 @@ int main(int argc, char **argv)
 		sscanf(msg, "%s", tag);
 		
 		if (!strcmp(tag, "READY")) break;
+		else if (!strcmp(tag, "BOARD"))
+			sscanf(msg, "%*s %u", &BOARDSIZE);
+		else if (!strcmp(tag, "PLAYERS"))
+			sscanf(msg, "%*s %u", &NUMPLAYERS);
+		else if (!strcmp(tag, "ROUNDS"))
+			sscanf(msg, "%*s %u", &NUMROUNDS);
 	}
 
 	copyself(); game_setup(players);
@@ -93,6 +108,57 @@ int main(int argc, char **argv)
 		sscanf(msg, "%s", tag);
 		
 		if (!strcmp(tag, "ENDGAME")) break;
+		else if (!strcmp(tag, "ROUND"))
+		{
+			unsigned int rnum;
+			sscanf(msg, "%*s %u", &rnum);
+			
+			while ((cc = recv(msg)))
+			{
+				sscanf(msg, "%s", tag);
+				
+				if (!strcmp(tag, "GO")) break;
+				else EXPECTED(tag, "GO");
+			}
+
+			copyself();
+			player_turn(rnum, players);
+
+			clamp(&SELF.cow.x, 0, BOARDSIZE);
+			clamp(&SELF.cow.y, 0, BOARDSIZE);
+
+			clamp(&SELF.fence1.x, 0, BOARDSIZE);
+			clamp(&SELF.fence2.x, SELF.fence1.x, BOARDSIZE);
+
+			clamp(&SELF.fence1.y, 0, BOARDSIZE);
+			clamp(&SELF.fence2.y, SELF.fence1.y, BOARDSIZE);
+
+			sprintf(msg, "MOVE %u %u %u %u %u %u"
+			,	SELF.cow.x, SELF.cow.y
+			,	SELF.fence1.x, SELF.fence1.y
+			,	SELF.fence2.x, SELF.fence2.y
+			);
+			send(msg);
+			
+			while ((cc = recv(msg)))
+			{
+				sscanf(msg, "%s", tag);
+				
+				if (!strcmp(tag, "NEXT")) break;
+				else if (!strcmp(tag, "PLAYER"))
+				{
+					sscanf(msg, "%*s %d", &i);
+					p = &players[i];
+
+					sscanf(msg, "%*s %*d %u %u %u %u %u %u %u %u"
+					,	&p->cow.x, &p->cow.y
+					,	&p->fence1.x, &p->fence1.y
+					,	&p->fence2.x, &p->fence2.y
+					,	&p->lastscore, &p->score
+					);
+				}
+			}
+		}
 		
 		// got an unexpected message...
 		else EXPECTED(tag, "ROUND/ENDGAME/MOVE/UPDATE");

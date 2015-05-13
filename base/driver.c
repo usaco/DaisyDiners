@@ -43,6 +43,10 @@
 
 #define randf() ((double)rand()/(double)RAND_MAX)
 
+int NUMROUNDS = -1;
+
+int BOARDSIZE = 0;
+
 int NUMAGENTS = -1;
 struct agent_t agents[MAXAGENTS];
 
@@ -109,6 +113,27 @@ void socket_setup()
 void setup_game(int argc, char** argv)
 {
 	unsigned int i; char msg[MSG_BFR_SZ];
+	fgets(msg, MSG_BFR_SZ, gamedata);
+
+	// basic stats
+	sscanf(msg, "%d %d %d", &BOARDSIZE, &NUMROUNDS, &NUMAGENTS);
+
+	// setup all bots provided
+	for (i = 0; i < NUMAGENTS; ++i)
+	{
+		// get the command for this bot
+		fgets(msg, MSG_BFR_SZ, gamedata);
+
+		// remove newline for command
+		char *p = strchr(msg, '\n');
+		if (p) *p = 0;
+		
+		// setup the agent using this command
+		for (p = msg; *p && isspace(*p); ++p);
+		setup_agent(i, &agents[i], p);
+
+		agents[i].score = 0u;
+	}
 
 	for (i = 0; i < NUMAGENTS; ++i)
 	{
@@ -119,14 +144,94 @@ void setup_game(int argc, char** argv)
 		strncpy(agents[i].name, msg + 5, 255);
 		agents[i].name[255] = 0;
 	}
+
+	sprintf(msg, "BOARD %u", BOARDSIZE);
+	tell_all(msg, -1);
+
+	sprintf(msg, "PLAYERS %u", NUMAGENTS);
+	tell_all(msg, -1);
+
+	sprintf(msg, "ROUNDS %u", NUMROUNDS);
+	tell_all(msg, -1);
 }
+
+int fence_value(struct agent_t *a)
+{ return (a->fence2.x - a->fence1.x) * (a->fence2.y - a->fence1.y); }
 
 int play_game()
 {
 	char msg[MSG_BFR_SZ];
 	struct agent_t *a;
+	unsigned int i, j, rnum;
+	
+	int contains[MAXAGENTS];
+	int scorediff[MAXAGENTS];
+	
+	for (rnum = 0; rnum < NUMROUNDS; ++rnum)
+	{
+		sprintf(msg, "ROUND %u", rnum);
+		tell_all(msg, -1);
 
-gameover:
+		tell_all("GO", -1);
+		for (i = 0, a = agents; i < NUMAGENTS; ++a, ++i)
+		{
+			listen_bot_timeout(msg, i, a->timeout);
+			if (a->status != RUNNING) continue;
+
+			sscanf(msg, "%*s %u %u %u %u %u %u"
+			,	&a->cow.x, &a->cow.y
+			,	&a->fence1.x, &a->fence1.y
+			,	&a->fence2.x, &a->fence2.y
+			);
+
+			contains[i] = 0u;
+			scorediff[i] = 0u;
+		}
+
+		for (i = 0; i < NUMAGENTS; ++i)
+		for (j = 0; j < NUMAGENTS; ++j) if (i != j)
+		{
+			// how many cows are contained within fence i
+			if (agents[j].cow.x >= agents[i].fence1.x && agents[j].cow.x <= agents[i].fence2.x 
+				&& agents[j].cow.y >= agents[i].fence1.y && agents[j].cow.y <= agents[i].fence2.y)
+					contains[i]++;
+		}
+
+		for (i = 0; i < NUMAGENTS; ++i)
+		for (j = 0; j < NUMAGENTS; ++j)
+		{
+			// score is the value of the fence subdivided
+			if (agents[j].cow.x >= agents[i].fence1.x && agents[j].cow.x <= agents[i].fence2.x 
+				&& agents[j].cow.y >= agents[i].fence1.y && agents[j].cow.y <= agents[i].fence2.y)
+					scorediff[j] += fence_value(&agents[i]) / contains[i];
+		}
+		
+		for (i = 0; i < NUMAGENTS; ++i)
+		{
+			// if your fence is empty, you get the score for it
+			if (contains[i] == 0) scorediff[i] += fence_value(&agents[i]);
+
+			// if you put your cow in your own fenced region, 0 points for the round
+			if (agents[i].cow.x >= agents[i].fence1.x && agents[i].cow.x <= agents[i].fence2.x 
+				&& agents[i].cow.y >= agents[i].fence1.y && agents[i].cow.y <= agents[i].fence2.y)
+					scorediff[i] = 0;
+		}
+
+		for (i = 0, a = agents; i < NUMAGENTS; ++a, ++i)
+		{
+			a->score += scorediff[i];
+			sprintf(msg, "PLAYER %u %u %u %u %u %u %u %u %u", i
+			,	a->cow.x, a->cow.y
+			,	a->fence1.x, a->fence1.y
+			,	a->fence2.x, a->fence2.y
+			,	scorediff[i], a->score
+			);
+			tell_all(msg, -1);
+		}
+		
+		tell_all("NEXT", -1);
+	}
+
 	tell_all("ENDGAME", -1);
 	return 0;
 }
@@ -157,7 +262,9 @@ int main(int argc, char** argv)
 		exit(0);
 	}
 
+	gamedata = fopen(argv[1], "r");
 	setup_game(argc, argv);
+
 	if (setup_bcb_vis(NUMAGENTS, agents, &argc, &argv))
 	{
 		tell_all("READY", -1);

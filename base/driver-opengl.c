@@ -81,7 +81,7 @@ struct Image read_image(char *filename)
 	// add alpha channel, using transparent key
 	for (i = I.height * I.width - 1; i >= 0; --i)
 	{
-		medriverove(I.data + 4 * i, I.data + 3 * i, 3);
+		memmove(I.data + 4 * i, I.data + 3 * i, 3);
 		I.data[4 * i + 3] = 255 * !memcmp(I.data + 4 * i, TRANSPARENT, 3);
 	}
 
@@ -125,7 +125,7 @@ struct Image read_image_colored(char *filename, float *color)
 	// add alpha channel, using transparent key
 	for (i = I.height * I.width - 1; i >= 0; --i)
 	{
-		medriverove(I.data + 4 * i, I.data + 3 * i, 3);
+		memmove(I.data + 4 * i, I.data + 3 * i, 3);
 		I.data[4 * i + 3] = 255 * !memcmp(I.data + 4 * i, TRANSPARENT, 3);
 
 		if (!memcmp(I.data + 4 * i, COLORABLE, 3))
@@ -133,7 +133,7 @@ struct Image read_image_colored(char *filename, float *color)
 			unsigned char newcolor[3];
 			for (j = 0; j < 3; ++j)
 				newcolor[j] = (unsigned char)(255 * color[j]);
-			medriverove(I.data + 4 * i, newcolor, 3);
+			memmove(I.data + 4 * i, newcolor, 3);
 		}
 	}
 
@@ -266,6 +266,8 @@ void draw_object(int coord, struct Image image)
 int _numagents;
 struct agent_t *_agents;
 int _turn;
+
+struct Image field;
 
 #define SCALE(x) log(x)
 int draw_screen(int numagents, struct agent_t *agents, const int turn)
