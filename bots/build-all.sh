@@ -10,6 +10,7 @@ function resetup()
 		then
 			name=${i%%.c}
 			rm -rf $name/
+			echo ">>> Re-setup $name"
 			echo Deleted $name
 			bash ../setup-bot.sh $name
 			cp $1/$i $name/$i
@@ -19,6 +20,7 @@ function resetup()
 		then
 			name=${i%%.cpp}
 			rm -rf $name/
+			echo ">>> Re-setup $name"
 			echo Deleted $name
 			bash ../setup-bot-cpp.sh $name
 			cp $1/$i $name/$i

@@ -95,7 +95,14 @@ int main(int argc, char **argv)
 		else if (!strcmp(tag, "BOARD"))
 			sscanf(msg, "%*s %u", &BOARDSIZE);
 		else if (!strcmp(tag, "PLAYERS"))
+		{
 			sscanf(msg, "%*s %u", &NUMPLAYERS);
+			for (i = 0, p = players; i < NUMPLAYERS; ++i, ++p)
+			{
+				p->id = i;
+				p->lastscore = p->score = 0;
+			}
+		}
 		else if (!strcmp(tag, "ROUNDS"))
 			sscanf(msg, "%*s %u", &NUMROUNDS);
 	}
@@ -167,3 +174,11 @@ int main(int argc, char **argv)
 	quit: game_end();
 	return EXIT_SUCCESS;
 }
+
+int is_inside_fence(struct coord_t* pt, struct coord_t* f1, struct coord_t* f2)
+{
+	if (pt->x < f1->x || pt->x > f2->x) return 0;
+	if (pt->y < f1->y || pt->y > f2->y) return 0;
+	return 1;
+}
+

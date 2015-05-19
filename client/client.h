@@ -23,6 +23,9 @@ struct player_data
 	int score;
 };
 
+// quick helper method
+int is_inside_fence(struct coord_t*, struct coord_t*, struct coord_t*);
+
 extern int BOARDSIZE;
 extern int NUMPLAYERS;
 extern int NUMROUNDS;
