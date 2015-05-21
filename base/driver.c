@@ -133,6 +133,7 @@ void setup_game(int argc, char** argv)
 		setup_agent(i, &agents[i], p);
 
 		agents[i].score = 0u;
+		agents[i].id = i;
 	}
 
 	for (i = 0; i < NUMAGENTS; ++i)
@@ -230,10 +231,16 @@ int play_game()
 		}
 		
 		tell_all("NEXT", -1);
+		update_bcb_vis(NUMAGENTS, agents, rnum);
 	}
 
 	tell_all("ENDGAME", -1);
-	return 0;
+	
+	struct agent_t *best = NULL;
+	for (i = 0, a = agents; i < NUMAGENTS; ++a, ++i)
+		if (!best || a->score > best->score) best = a;
+	
+	return best ? best->id : -1;
 }
 
 void sighandler(int signum)

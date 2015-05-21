@@ -18,6 +18,7 @@ struct coord_t
 
 struct agent_t
 {
+	int id;
 	char name[256];        // bot name
 
 	struct coord_t cow;    // cow location

@@ -58,10 +58,18 @@ struct Image
 struct VisData
 {
 	float *color;
-	struct Image image;
+	struct Image guy;
+	struct Image cow;
 };
 
 struct VisData visdata[MAXAGENTS];
+unsigned int iconheight = 0u;
+
+int _numagents;
+struct agent_t *_agents;
+int _turn;
+
+int draw_screen(int, struct agent_t*, const int);
 
 struct Image read_image(char *filename)
 {
@@ -181,6 +189,49 @@ void gr_draw_image(float x, float y, float s, struct Image I)
 	glPopMatrix();
 }
 
+void gr_draw_image_centered(float x, float y, float s, struct Image I)
+{
+	glPushMatrix();
+	glLoadIdentity();
+
+	float w = I.width, h = I.height;
+	glTranslatef(x, y, 0.0);
+	glScalef(s, s, 1.0);
+	glColor4f(1, 1, 1, 1);
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, I.texID);
+	glBegin(GL_TRIANGLE_STRIP);
+	glTexCoord2f(0, 0); glVertex3f(-w/2, -h/2, 0.0);
+	glTexCoord2f(0, 1); glVertex3f(-w/2, +h/2, 0.0);
+	glTexCoord2f(1, 0); glVertex3f(+w/2, -h/2, 0.0);
+	glTexCoord2f(1, 1); glVertex3f(+w/2, +h/2, 0.0);
+	glEnd();
+
+	glPopMatrix();
+}
+
+void gr_draw_pattern(float x1, float y1, float x2, float y2, struct Image I, float z)
+{
+	glPushMatrix();
+	glLoadIdentity();
+
+	float w = x2 - x1, h = y2 - y1;
+	glTranslatef(x1, y1, 0.0);
+	glColor4f(1, 1, 1, 1);
+
+	glEnable(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, I.texID);
+	glBegin(GL_TRIANGLE_STRIP);
+	glTexCoord2f(0, 0); glVertex3f(0, 0, 0.0);
+	glTexCoord2f(0, z); glVertex3f(0, h, 0.0);
+	glTexCoord2f(z, 0); glVertex3f(w, 0, 0.0);
+	glTexCoord2f(z, z); glVertex3f(w, h, 0.0);
+	glEnd();
+
+	glPopMatrix();
+}
+
 void gr_change_size(int w, int h)
 {
 	/* Avoid divide by zero */
@@ -195,6 +246,8 @@ void gr_change_size(int w, int h)
 
 	WINDOW_W = w;
 	WINDOW_H = h;
+	
+	draw_screen(_numagents, _agents, _turn);
 }
 
 void gr_set_orthographic_projection(void)
@@ -254,34 +307,73 @@ void gr_rect(float x, float y, float w, float h)
 	glPopMatrix();
 }
 
-void draw_object(int coord, struct Image image)
+void gr_rect_border(float x, float y, float w, float h, int thick)
 {
-	int row = BOARDSIZE - 1 - (coord / BOARDSIZE);
-	int col = coord % BOARDSIZE;
+	glPushMatrix();
+	glLoadIdentity();
 
-	float scale = min(WINDOW_W * 1.0 / image.width / BOARDSIZE, WINDOW_H * 1.0 / image.height / BOARDSIZE);
-	gr_draw_image(col * WINDOW_W / BOARDSIZE, row * WINDOW_H / BOARDSIZE, scale, image);
+	glTranslatef(x, y, 0.0);
+	glLineWidth(thick);
+
+	glDisable(GL_TEXTURE_2D);
+	glBegin(GL_LINE_LOOP);
+	glVertex3f(0, 0, 0.0);
+	glVertex3f(0, h, 0.0);
+	glVertex3f(w, h, 0.0);
+	glVertex3f(w, 0, 0.0);
+	glEnd();
+
+	glPopMatrix();
 }
 
-int _numagents;
-struct agent_t *_agents;
-int _turn;
+unsigned int boxheight = 0u;
+unsigned int rowheight = 20u;
+unsigned int maxscore = 0u;
 
 struct Image field;
 
 #define SCALE(x) log(x)
 int draw_screen(int numagents, struct agent_t *agents, const int turn)
 {
-	int i, j;
+	int i; struct agent_t *a = agents;
+	for (i = 0; i < numagents; ++a, ++i)
+		if (a->score > maxscore) maxscore = a->score;
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	gr_set_orthographic_projection();
 
-	float fieldscale = WINDOW_W * 1.0 / field.width / BOARDSIZE;
+	gr_draw_pattern(0, 0, WINDOW_W, WINDOW_H, field, BOARDSIZE);
 	
-	for (i = 0; i < BOARDSIZE; ++i)
-	for (j = 0; j < BOARDSIZE; ++j)
+	float s = WINDOW_W / BOARDSIZE;
+	if (turn) for (i = 0, a = agents; i < numagents; ++a, ++i)
 	{
-		gr_draw_image(i * WINDOW_W / BOARDSIZE, j * WINDOW_H / BOARDSIZE, fieldscale, field);
+		struct VisData *vis = a->vis;
+		float w = a->fence2.x - a->fence1.x + 1;
+		float h = a->fence2.y - a->fence1.y + 1;
+		
+		glColor4fv(vis->color);
+		gr_rect_border(a->fence1.x*s, a->fence1.y*s, w*s, h*s, 3);
+		
+		gr_draw_image_centered((a->cow.x + 0.5)*s, (a->cow.y + 0.5)*s, s/vis->cow.width, vis->cow);
+	}
+	
+	glColor4f(1,1,1,0.2);
+	gr_rect(0, WINDOW_H - (boxheight + 15), WINDOW_W, boxheight + 15);
+
+	char buffer[128];
+	
+	float iconscale = rowheight * 1.0 / iconheight;
+	for (i = 0, a = agents; i < numagents; ++a, ++i)
+	{
+		struct VisData *vis = a->vis;
+		gr_draw_image(10, WINDOW_H - boxheight - 5 + rowheight * i, iconscale, vis->guy);
+		gr_print_font(45, WINDOW_H - boxheight - 5 + rowheight * i, a->name, BLACK, GLUT_BITMAP_HELVETICA_18);
+
+		glColor4fv(vis->color);
+		gr_rect(150, WINDOW_H - boxheight + rowheight * i, (WINDOW_W - 270) * (a->score * 1.0 / maxscore), rowheight - 10);
+
+		sprintf(buffer, "%d", a->score);
+		gr_print_font(WINDOW_W - 90, WINDOW_H - boxheight - 5 + rowheight * i, buffer, BLACK, GLUT_BITMAP_HELVETICA_18);
 	}
 	
 	return 1;
@@ -291,9 +383,11 @@ int setup_bcb_vis(int numagents, struct agent_t *agents, int *argc, char ***argv
 {
 	glutInit(argc, *argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	
+	boxheight = rowheight * numagents;
 
 	glutInitWindowSize(WINDOW_W, WINDOW_H);
-	glutCreateWindow("");
+	glutCreateWindow("Daisy Diners");	
 
 	glutReshapeFunc( gr_change_size );
 	gr_change_size(WINDOW_W, WINDOW_H);
@@ -303,12 +397,25 @@ int setup_bcb_vis(int numagents, struct agent_t *agents, int *argc, char ***argv
 	glEnable(GL_ALPHA_TEST);
 	glBlendFunc(GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA);
 
+	field = read_image("images/field.ppm");
+	
+	int i;
+	for (i = 0; i < numagents; ++i)
+	{
+		visdata[i].color = COLORS[i % NUMCOLORS];
+		visdata[i].guy = read_image_colored("images/guy.ppm", visdata[i].color);
+		visdata[i].cow = read_image_colored("images/cow.ppm", visdata[i].color);
+		
+		iconheight = visdata[i].guy.height;
+		agents[i].vis = &visdata[i];
+	}
+
 	glutMainLoopEvent();
 	draw_screen(numagents, agents, 0);
 
 	glutSwapBuffers();
 	glutMainLoopEvent();
-	usleep(3000000L);
+	usleep(2000000L);
 
 	return 1;
 }
@@ -324,7 +431,7 @@ int update_bcb_vis(int numagents, struct agent_t *agents, const int turn)
 
 	glutSwapBuffers();
 	glutMainLoopEvent();
-	usleep(1000000L / (10 + turn));
+	usleep(10000000L / (10 + turn));
 
 	return 1;
 }

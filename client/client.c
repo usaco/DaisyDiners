@@ -79,14 +79,13 @@ int main(int argc, char **argv)
 	
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
-	srand(tv.tv_usec);
-
 	if (!client_setup(&argc, &argv))
 		return EXIT_FAILURE;
 
 	recv(msg); sscanf(msg, "%*s %d", &SELF.id);
 	sprintf(msg, "NAME %s", BOT_NAME); send(msg);
-
+	
+	srand(tv.tv_usec+SELF.id);
 	while ((cc = recv(msg)))
 	{
 		sscanf(msg, "%s", tag);
