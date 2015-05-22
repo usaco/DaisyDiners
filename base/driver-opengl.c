@@ -248,6 +248,8 @@ void gr_change_size(int w, int h)
 	WINDOW_H = h;
 	
 	draw_screen(_numagents, _agents, _turn);
+	glutSwapBuffers();
+	glutMainLoopEvent();
 }
 
 void gr_set_orthographic_projection(void)

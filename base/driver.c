@@ -157,7 +157,7 @@ void setup_game(int argc, char** argv)
 }
 
 int fence_value(struct agent_t *a)
-{ return (a->fence2.x - a->fence1.x) * (a->fence2.y - a->fence1.y); }
+{ return (a->fence2.x - a->fence1.x + 1) * (a->fence2.y - a->fence1.y + 1); }
 
 int play_game()
 {
