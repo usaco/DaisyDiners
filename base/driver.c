@@ -263,13 +263,10 @@ int main(int argc, char** argv)
 	gettimeofday(&tv, NULL);
 	srand(tv.tv_usec);
 
-	if (argc < 2)
-	{
-		fprintf(stderr, "USAGE: %s <gamefile>\n", argv[0]);
-		exit(0);
-	}
+	char* gamefile = "driver.dat";
+	if (argc > 1) gamefile = argv[1];
 
-	gamedata = fopen(argv[1], "r");
+	gamedata = fopen(gamefile, "r");
 	setup_game(argc, argv);
 
 	if (setup_bcb_vis(NUMAGENTS, agents, &argc, &argv))
