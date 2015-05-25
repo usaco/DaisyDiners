@@ -59,7 +59,7 @@ int send(char* msg)
 	return br;
 }
 
-void clamp(int *x, int a, int b)
+void clamp(unsigned int *x, unsigned int a, unsigned int b)
 {
 	if (*x < a) *x = a;
 	if (*x > b) *x = b;
