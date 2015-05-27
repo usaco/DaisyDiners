@@ -185,9 +185,17 @@ int play_game()
 			,	&a->fence2.x, &a->fence2.y
 			);
 
+			a->_cow.x = a->cow.x;
+			a->_cow.y = a->cow.y;
+
 			contains[i] = 0u;
-			scorediff[i] = 0u;
+			a->_dscore = 0u;
 		}
+
+		for (i = 0; i < NUMAGENTS; ++i)
+			if (agents[i].cow.x >= agents[i].fence1.x && agents[i].cow.x <= agents[i].fence2.x 
+				&& agents[i].cow.y >= agents[i].fence1.y && agents[i].cow.y <= agents[i].fence2.y)
+					{ agents[i].cow.x = BOARDSIZE + 1; agents[i].cow.y = BOARDSIZE + 1; }
 
 		for (i = 0; i < NUMAGENTS; ++i)
 		for (j = 0; j < NUMAGENTS; ++j) if (i != j)
@@ -204,28 +212,23 @@ int play_game()
 			// score is the value of the fence subdivided
 			if (agents[j].cow.x >= agents[i].fence1.x && agents[j].cow.x <= agents[i].fence2.x 
 				&& agents[j].cow.y >= agents[i].fence1.y && agents[j].cow.y <= agents[i].fence2.y)
-					scorediff[j] += fence_value(&agents[i]) / contains[i];
+					agents[j]._dscore += !contains[i] ? 0 : fence_value(&agents[i]) / contains[i];
 		}
 		
 		for (i = 0; i < NUMAGENTS; ++i)
 		{
 			// if your fence is empty, you get the score for it
-			if (contains[i] == 0) scorediff[i] += fence_value(&agents[i]);
-
-			// if you put your cow in your own fenced region, 0 points for the round
-			if (agents[i].cow.x >= agents[i].fence1.x && agents[i].cow.x <= agents[i].fence2.x 
-				&& agents[i].cow.y >= agents[i].fence1.y && agents[i].cow.y <= agents[i].fence2.y)
-					scorediff[i] = 0;
+			if (contains[i] == 0) agents[i]._dscore += fence_value(&agents[i]);
 		}
 
 		for (i = 0, a = agents; i < NUMAGENTS; ++a, ++i)
 		{
-			a->score += scorediff[i];
+			a->score += a->_dscore;
 			sprintf(msg, "PLAYER %u %u %u %u %u %u %u %u %u", i
-			,	a->cow.x, a->cow.y
+			,	a->_cow.x, a->_cow.y
 			,	a->fence1.x, a->fence1.y
 			,	a->fence2.x, a->fence2.y
-			,	scorediff[i], a->score
+			,	a->_dscore, a->score
 			);
 			tell_all(msg, -1);
 		}

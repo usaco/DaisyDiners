@@ -22,8 +22,12 @@ struct agent_t
 	char name[256];        // bot name
 
 	struct coord_t cow;    // cow location
+	struct coord_t _cow;   // cow location
+
 	struct coord_t fence1; // fence top left
 	struct coord_t fence2; // fence bottom right
+
+	unsigned int _dscore;
 	unsigned int score;    // score
 
 // META:
