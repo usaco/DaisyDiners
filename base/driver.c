@@ -1,4 +1,4 @@
-#define DEBUG 1
+#define DEBUG 0
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -441,7 +441,8 @@ void cleanup_bots()
 	int i; for (i = 0; i < NUMAGENTS; ++i)
 	{
 		close(agents[i].fds[0]);
-		kill(agents[i].pid, SIGTERM);
+		close(agents[i].fds[1]);
+		kill(agents[i].pid, SIGKILL);
 	}
 }
 

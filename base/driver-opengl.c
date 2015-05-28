@@ -62,6 +62,9 @@ struct VisData
 	struct Image cow;
 };
 
+unsigned int boxheight = 0u;
+unsigned int rowheight = 20u;
+
 struct VisData visdata[MAXAGENTS];
 unsigned int iconheight = 0u;
 
@@ -243,13 +246,6 @@ void gr_change_size(int w, int h)
 
 	/* Set the viewport to be the entire window */
 	glViewport(0, 0, w, h);
-
-	WINDOW_W = w;
-	WINDOW_H = h;
-	
-	draw_screen(_numagents, _agents, _turn);
-	glutSwapBuffers();
-	glutMainLoopEvent();
 }
 
 void gr_set_orthographic_projection(void)
@@ -257,7 +253,7 @@ void gr_set_orthographic_projection(void)
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-	gluOrtho2D(0, WINDOW_W, 0, WINDOW_H);
+	gluOrtho2D(0, WINDOW_W, 0, WINDOW_H+boxheight);
 	glMatrixMode(GL_MODELVIEW);
 }
 
@@ -328,8 +324,6 @@ void gr_rect_border(float x, float y, float w, float h, int thick)
 	glPopMatrix();
 }
 
-unsigned int boxheight = 0u;
-unsigned int rowheight = 20u;
 unsigned int maxscore = 0u;
 
 struct Image field;
@@ -359,8 +353,8 @@ int draw_screen(int numagents, struct agent_t *agents, const int turn)
 		gr_draw_image_centered((a->cow.x + 0.5)*s, (a->cow.y + 0.5)*s, s/vis->cow.width, vis->cow);
 	}
 	
-	glColor4f(1,1,1,0.2);
-	gr_rect(0, WINDOW_H - (boxheight + 15), WINDOW_W, boxheight + 15);
+	glColor4f(0.2,0.6,0.2,0.2);
+	gr_rect(0, WINDOW_H, WINDOW_W, boxheight);
 
 	char buffer[128];
 	
@@ -368,14 +362,14 @@ int draw_screen(int numagents, struct agent_t *agents, const int turn)
 	for (i = 0, a = agents; i < numagents; ++a, ++i)
 	{
 		struct VisData *vis = a->vis;
-		gr_draw_image(10, WINDOW_H - boxheight - 5 + rowheight * i, iconscale, vis->guy);
-		gr_print_font(45, WINDOW_H - boxheight - 5 + rowheight * i, a->name, BLACK, GLUT_BITMAP_HELVETICA_18);
+		gr_draw_image(10, WINDOW_H + 5 + rowheight * i, iconscale, vis->guy);
+		gr_print_font(45, WINDOW_H + 5 + rowheight * i, a->name, BLACK, GLUT_BITMAP_HELVETICA_18);
 
 		glColor4fv(vis->color);
-		gr_rect(150, WINDOW_H - boxheight + rowheight * i, (WINDOW_W - 270) * (a->score * 1.0 / maxscore), rowheight - 10);
+		gr_rect(150, WINDOW_H + 10 + rowheight * i, (WINDOW_W - 270) * (a->score * 1.0 / maxscore), rowheight - 10);
 
 		sprintf(buffer, "%d", a->score);
-		gr_print_font(WINDOW_W - 90, WINDOW_H - boxheight - 5 + rowheight * i, buffer, BLACK, GLUT_BITMAP_HELVETICA_18);
+		gr_print_font(WINDOW_W - 90, WINDOW_H + 5 + rowheight * i, buffer, BLACK, GLUT_BITMAP_HELVETICA_18);
 	}
 	
 	return 1;
@@ -386,13 +380,13 @@ int setup_bcb_vis(int numagents, struct agent_t *agents, int *argc, char ***argv
 	glutInit(argc, *argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	
-	boxheight = rowheight * numagents;
+	boxheight = rowheight * numagents + 10;
 
-	glutInitWindowSize(WINDOW_W, WINDOW_H);
+	glutInitWindowSize(WINDOW_W, WINDOW_H+boxheight);
 	glutCreateWindow("Daisy Diners");	
 
 	glutReshapeFunc( gr_change_size );
-	gr_change_size(WINDOW_W, WINDOW_H);
+	gr_change_size(WINDOW_W, WINDOW_H+boxheight);
 	glClearColor(1.0, 1.0, 1.0, 0.0);
 
 	glEnable(GL_BLEND);
@@ -424,6 +418,8 @@ int setup_bcb_vis(int numagents, struct agent_t *agents, int *argc, char ***argv
 
 int update_bcb_vis(int numagents, struct agent_t *agents, const int turn)
 {
+	if (turn > 500 && (turn % 10) != 0) return 1;
+
 	//if (turn > 10 && (turn % (int)(2 * log(turn)))) return 1;
 	draw_screen(numagents, agents, turn);
 
@@ -433,7 +429,7 @@ int update_bcb_vis(int numagents, struct agent_t *agents, const int turn)
 
 	glutSwapBuffers();
 	glutMainLoopEvent();
-	usleep(10000000L / (10 + turn));
+	if (turn < 1000) usleep(10000000L / (10 + turn));
 
 	return 1;
 }
