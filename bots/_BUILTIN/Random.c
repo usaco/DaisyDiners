@@ -37,12 +37,13 @@ void player_turn(unsigned int roundnum, const struct player_data* players)
 
 	// cow inside our own fence gets us zero points. this bot is just BARELY
 	// smarter than that, but not by much.
+	int attempts = 10;
 	do
 	{
 		SELF.cow.x = rand() % BOARDSIZE;
 		SELF.cow.y = rand() % BOARDSIZE;
 	}
-	while (is_inside_fence(&SELF.cow, &SELF.fence1, &SELF.fence2));
+	while (is_inside_fence(&SELF.cow, &SELF.fence1, &SELF.fence2) && --attempts > 0);
 }
 
 // This function is called at the end of the game, as a courtesy.

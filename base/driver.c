@@ -166,7 +166,6 @@ int play_game()
 	unsigned int i, j, rnum;
 	
 	int contains[MAXAGENTS];
-	int scorediff[MAXAGENTS];
 	
 	for (rnum = 0; rnum < NUMROUNDS; ++rnum)
 	{
@@ -249,6 +248,8 @@ int play_game()
 void sighandler(int signum)
 {
 	fprintf(stderr, "!!! Signal %d\n", signum);
+	fprintf(stdout, "%d\n", -1);
+
 	close_bcb_vis();
 	cleanup_bots();
 	exit(1);
