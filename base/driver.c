@@ -159,6 +159,12 @@ void setup_game(int argc, char** argv)
 int fence_value(struct agent_t *a)
 { return (a->fence2.x - a->fence1.x + 1) * (a->fence2.y - a->fence1.y + 1); }
 
+void clamp(unsigned int *x, unsigned int a, unsigned int b)
+{
+	if (*x < a) *x = a;
+	if (*x > b) *x = b;
+}
+
 int play_game()
 {
 	char msg[MSG_BFR_SZ];
@@ -183,6 +189,15 @@ int play_game()
 			,	&a->fence1.x, &a->fence1.y
 			,	&a->fence2.x, &a->fence2.y
 			);
+
+			clamp(&a->cow.x, 0, BOARDSIZE);
+			clamp(&a->cow.y, 0, BOARDSIZE);
+
+			clamp(&a->fence1.x, 0, BOARDSIZE);
+			clamp(&a->fence2.x, a->fence1.x, BOARDSIZE);
+
+			clamp(&a->fence1.y, 0, BOARDSIZE);
+			clamp(&a->fence2.y, a->fence1.y, BOARDSIZE);
 
 			a->_cow.x = a->cow.x;
 			a->_cow.y = a->cow.y;
@@ -231,7 +246,7 @@ int play_game()
 			);
 			tell_all(msg, -1);
 		}
-		
+
 		tell_all("NEXT", -1);
 		update_bcb_vis(NUMAGENTS, agents, rnum);
 	}
@@ -419,6 +434,8 @@ void listen_bot_timeout(char* msg, int bot, int milliseconds)
 // tell a bot a message
 void tell_bot(char* msg, int bot)
 {
+	if (agents[bot].status != RUNNING) return;
+
 	// write message to file descriptor for a bot
 	int br, bl; char* m = msg;
 	for (bl = MSG_BFR_SZ; bl > 0; bl -= br, m += br)

@@ -17,6 +17,7 @@ sed "s/BOTNAME/$botname/g" $rootdir/client/bot-template.c > $botdir/$botfile.cpp
 echo "Setting up Makefile for C++ compilation"
 sed "s/${botfile}.c/${botfile}.cpp/g" -i $botdir/Makefile
 sed "s/gcc/g++/g" -i $botdir/Makefile
+sed "s/-std=c99//g" -i $botdir/Makefile
 
 echo "Symlinking client libraries"
 cd $botdir
